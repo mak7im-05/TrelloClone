@@ -1,0 +1,436 @@
+.board {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg, #0079bf, #5067c5);
+}
+
+.board__header {
+    padding: 12px 16px;
+}
+
+.board__title {
+    color: white;
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.board__lists {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px;
+    overflow-x: auto;
+}
+
+.board__lists {
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.list-wrapper {
+    display: flex;
+}
+
+.list {
+    width: 272px;
+    min-width: 272px;
+    background: #ebecf0;
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.list {
+    max-height: none;
+    overflow: visible;
+}
+
+.list--drag-over {
+    background: #dfe1e6;
+}
+
+.list__title {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.list__cards {
+    display: flex;
+    flex-direction: column;
+}
+
+
+.card {
+    background: white;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 0 rgba(9, 30, 66, 0.25);
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.card--dragging {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.card-add,
+.list-add {
+    background: transparent;
+    border: none;
+    padding: 8px;
+    text-align: left;
+    font-size: 14px;
+    color: #5e6c84;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.card-add:hover,
+.list-add:hover {
+    background: rgba(9,30,66,.08);
+}
+
+.card-create {
+    background: #ebecf0;
+    border-radius: 6px;
+    padding: 8px;
+    margin-top: 8px;
+}
+
+.card-create input {
+    width: 100%;
+    min-height: 54px;
+    resize: none;
+
+    padding: 8px;
+    border-radius: 4px;
+    border: none;
+    outline: none;
+
+    font-size: 14px;
+    box-shadow: inset 0 0 0 2px #dfe1e6;
+}
+
+.card-create input:focus {
+    box-shadow: inset 0 0 0 2px #0079bf;
+}
+
+.card-create__actions {
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-create__actions button:first-child {
+    background: #0079bf;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.card-create__actions button:first-child:hover {
+    background: #026aa7;
+}
+
+.card-create__actions button:last-child {
+    background: transparent;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #5e6c84;
+}
+
+.card-create__actions button:last-child:hover {
+    color: #172b4d;
+}
+
+.card-add {
+    margin-top: 4px;
+}
+
+
+.list {
+    overflow-x: hidden;
+}
+.list__cards {
+    overflow-x: hidden;
+}
+.card {
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+.card-create input {
+    box-sizing: border-box;
+}
+
+.board {
+    padding: 16px;
+}
+
+.board__lists {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.list-wrapper {
+    min-width: 260px;
+}
+
+.list {
+    background: #f4f5f7;
+    border-radius: 8px;
+    padding: 8px;
+}
+
+.list__title {
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.list__cards {
+    min-height: 20px;
+}
+
+.list--drag-over {
+    background: #e0e4ea;
+}
+
+.card {
+    background: #fff;
+    padding: 8px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.card--dragging {
+    background: #e3f2fd;
+}
+
+.list-add {
+    background: rgba(255, 255, 255, 0.4);
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    min-width: 260px;
+    text-align: left;
+}
+
+.list-add-form {
+    background: #f4f5f7;
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 260px;
+}
+
+.list-add-form input {
+    width: 100%;
+    padding: 6px;
+    margin-bottom: 6px;
+}
+
+.list-add-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.list-add-actions .cancel {
+    background: transparent;
+}
+
+.card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    padding: 8px;
+}
+
+.card__body {
+    flex: 1;
+    padding-right: 24px; /* место под кнопку */
+}
+
+.card__delete {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    font-size: 14px;
+    color: #999;
+    opacity: 0;
+}
+
+.header__user-link {
+    margin-left: 6px;
+    color: inherit;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.header__user-link:hover {
+    text-decoration: underline;
+}
+
+
+.card:hover .card__delete {
+    opacity: 1;
+}
+
+.card__delete:hover {
+    color: #e5533d;
+}
+
+.editable {
+    cursor: pointer;
+}
+
+.list input,
+.card input {
+    width: 100%;
+    padding: 6px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+
+.list-wrapper {
+    margin-top: 50px;
+}
+
+
+/* ===== BOARD ===== */
+.board {
+    height: 100vh;
+    background: #0079bf;
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.board__lists {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+/* ===== LIST ===== */
+.list {
+    background: #ebecf0;
+    width: 272px;
+    border-radius: 8px;
+    padding: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.list__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.list__header button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.list__cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.list-add {
+    background: rgba(255,255,255,0.3);
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ===== CARD ===== */
+.card {
+    background: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card:hover {
+    background: #f4f5f7;
+}
+
+.card button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #888;
+}
+
+/* ===== ADD FORMS ===== */
+input, textarea, select {
+    width: 100%;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    margin-bottom: 6px;
+}
+
+button {
+    background: #0079bf;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #026aa7;
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal {
+    background: #f4f5f7;
+    width: 500px;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.modal textarea {
+    min-height: 120px;
+}
+
+.modal button {
+    margin-right: 8px;
+}
