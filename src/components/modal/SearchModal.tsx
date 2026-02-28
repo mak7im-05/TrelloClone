@@ -1,69 +1,60 @@
-import React, {type RefObject, useEffect, useMemo} from "react";
-import {modalBlurHandler} from "../../static/ts/util";
+import React, {useMemo} from "react";
+import {Link} from "react-router-dom";
 import type {Board} from "../../static/ts/mockData";
 import {mockBoards} from "../../static/ts/mockData";
 
 interface SearchModalProps {
     backendQuery: string;
-    searchElem: RefObject<HTMLElement>;
+    searchElem: React.RefObject<HTMLElement | null>;
     setShowModal: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const getSearchSuggestionsPosition = (searchElem: RefObject<HTMLElement>) => {
-    if (!searchElem?.current) return null;
-
-    const rect = searchElem.current.getBoundingClientRect();
-    return {
-        top: rect.y + rect.height + 10 + "px",
-        left: rect.x + "px",
-    };
-};
-
-const SearchModal: React.FC<SearchModalProps> = ({
-                                                     backendQuery,
-                                                     searchElem,
-                                                     setShowModal,
-                                                 }) => {
-
+const SearchModal: React.FC<SearchModalProps> = ({backendQuery}) => {
     const normalizedQuery = backendQuery.trim().toLowerCase();
 
     const foundBoards: Board[] = useMemo(() => {
         if (!normalizedQuery) return [];
-
         return mockBoards.filter((board) =>
             board.title.toLowerCase().includes(normalizedQuery)
         );
     }, [normalizedQuery]);
 
-    useEffect(() => {
-        modalBlurHandler(setShowModal)();
-    }, [setShowModal]);
-
     return (
-        <div
-            className="search-suggestions"
-            style={getSearchSuggestionsPosition(searchElem) || undefined}
-        >
-            <p className="search-suggestions__title">Cards</p>
+        <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
+            <div className="px-3 py-2 border-b border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Boards</p>
+            </div>
 
-            <p className="search-suggestions__title">Boards</p>
+            {foundBoards.length > 0 ? (
+                <ul>
+                    {foundBoards.map((board) => {
+                        const bg = board.color
+                            ? {backgroundColor: board.color.startsWith("#") ? board.color : `#${board.color}`}
+                            : board.image_url
+                                ? {backgroundImage: `url(${board.image_url})`, backgroundSize: "cover"}
+                                : {backgroundColor: "#6B7280"};
 
-            <ul className="search-suggestions__boards">
-                {foundBoards.length ? (
-                    foundBoards.map((board) => (
-                        <li
-                            key={board.id}
-                            className="search-suggestions__board"
-                        >
-                            {board.title}
-                        </li>
-                    ))
-                ) : (
-                    <li className="search-suggestions__empty">
-                        No boards found
-                    </li>
-                )}
-            </ul>
+                        return (
+                            <li key={board.id}>
+                                <Link
+                                    to={`/b/${board.id}`}
+                                    className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 transition-colors"
+                                >
+                                    <span
+                                        className="w-8 h-6 rounded flex-shrink-0"
+                                        style={bg}
+                                    />
+                                    <span className="text-sm text-gray-800">{board.title}</span>
+                                </Link>
+                            </li>
+                        );
+                    })}
+                </ul>
+            ) : (
+                <p className="px-3 py-4 text-sm text-gray-400 text-center">
+                    No boards found for &ldquo;{backendQuery}&rdquo;
+                </p>
+            )}
         </div>
     );
 };

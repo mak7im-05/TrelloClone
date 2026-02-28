@@ -1,7 +1,7 @@
 import React from "react";
-import {v4 as uuidv4} from "uuid";
 
 interface Label {
+    id: number;
     color: string;
     title?: string;
 }
@@ -14,15 +14,14 @@ const Labels: React.FC<LabelsProps> = ({labels}) => {
     if (labels.length === 0) return null;
 
     return (
-        <div className="labels">
+        <div className="flex flex-wrap gap-1 mb-2">
             {labels.map((label) => (
-                <p
-                    className="labels__label"
-                    key={uuidv4()}
-                    style={{color: `#${label.color}`}}
-                >
-                    ___
-                </p>
+                <span
+                    key={label.id}
+                    className="h-2 w-8 rounded-full inline-block"
+                    style={{backgroundColor: `#${label.color}`}}
+                    title={label.title}
+                />
             ))}
         </div>
     );

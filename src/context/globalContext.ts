@@ -1,8 +1,8 @@
 import React from "react";
-import type {Board} from "../static/ts/util.ts";
+import type {Board, User} from "../static/ts/mockData.ts";
 
 export interface GlobalContextType {
-    authUser: any | null;
+    authUser: User | null;
     checkedAuth: boolean;
     board: Board | null;
     setBoard: React.Dispatch<React.SetStateAction<Board | null>> | null;

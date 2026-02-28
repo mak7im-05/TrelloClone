@@ -1,114 +1,98 @@
-import React, {useContext, useEffect, useRef, useState} from "react";
-import logo from "../../static/img/logo2.png";
+import {useContext, useEffect, useRef, useState} from "react";
+import logo from "../../static/img/logo.png";
 import ProfilePic from "../boards/ProfilePic";
 import {Link, type Location} from "react-router-dom";
-import useBlurSetState from "../../hooks/useBlurSetState";
 import {handleBackgroundBrightness} from "../../static/ts/util";
 import globalContext, {type GlobalContextType} from "../../context/globalContext";
+import SearchModal from "../modal/SearchModal";
 
 interface HeaderProps {
     location: Location;
 }
 
 const Header: React.FC<HeaderProps> = ({location}) => {
-    const {authUser, board} =
-        useContext<GlobalContextType>(globalContext);
+    const {authUser, board} = useContext<GlobalContextType>(globalContext);
 
     const [searchQuery, setSearchQuery] = useState<string>("");
-
-    const searchElem = useRef<HTMLLIElement | null>(null);
-
-    const [showNotifications, setShowNotifications] =
-        useState<boolean>(false);
-
-    useBlurSetState(
-        ".label-modal",
-        showNotifications,
-        setShowNotifications
-    );
+    const [showSearch, setShowSearch] = useState(false);
+    const searchElem = useRef<HTMLDivElement | null>(null);
 
     const onBoardPage = location.pathname.split("/")[1] === "b";
 
-    const [isBackgroundDark, setIsBackgroundDark] =
-        useState<boolean>(false);
+    const [isBackgroundDark, setIsBackgroundDark] = useState<boolean>(false);
 
     useEffect(
         handleBackgroundBrightness(board, setIsBackgroundDark),
         [board]
     );
 
-    const userName =
-        authUser?.full_name.replace(/ .*/, "") || "User";
+    const userName = authUser?.full_name.replace(/ .*/, "") || "User";
+
+    const transparent = isBackgroundDark && onBoardPage;
+
+    const headerBg = transparent
+        ? "bg-black/20 backdrop-blur-sm"
+        : "bg-[#0052cc]";
 
     return (
-        <>
-            <header
-                className={`header${
-                    isBackgroundDark && onBoardPage
-                        ? " header--transparent"
-                        : ""
-                }`}
-            >
-                <div className="header__section">
-                    <ul className="header__list">
-                        <li className="header__li">
-                            <a>
-                                <i className="fab fa-trello"/> Boards
-                            </a>
-                        </li>
+        <header
+            className={`fixed top-0 left-0 right-0 z-50 h-14 flex items-center px-3 gap-2 transition-colors ${headerBg}`}
+        >
+            {/* Left: logo + boards */}
+            <div className="flex items-center gap-1 shrink-0">
+                <Link to="/">
+                    <img src={logo} alt="Trello" className="h-7 object-contain"/>
+                </Link>
+                <Link
+                    to="/"
+                    className="hidden sm:flex items-center gap-1 text-white/90 hover:text-white text-sm font-medium px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                >
+                    <i className="fab fa-trello text-xs"/> Boards
+                </Link>
+            </div>
 
-                        <li
-                            className={`header__li header__li--search${
-                                searchQuery
-                                    ? " header__li--active"
-                                    : ""
-                            }`}
-                            ref={searchElem}
-                        >
-                            <i className="far fa-search"/>{" "}
-                            <input
-                                type="text"
-                                placeholder="Search"
-                                value={searchQuery}
-                                onChange={(e) =>
-                                    setSearchQuery(e.target.value)
-                                }
-                            />
-                        </li>
-                    </ul>
-                </div>
-
-                <div className="header__section">
-                    <Link to="/">
-                        <img
-                            className="header__logo"
-                            src={logo}
-                            alt="Logo"
+            {/* Center: search */}
+            <div className="flex-1 flex justify-center px-2">
+                <div className="relative w-full max-w-xs" ref={searchElem}>
+                    <div className="flex items-center bg-white/20 hover:bg-white/30 focus-within:bg-white rounded-md transition-colors">
+                        <i className="far fa-search text-white/70 pl-3 text-sm"/>
+                        <input
+                            type="text"
+                            placeholder="Search..."
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setShowSearch(e.target.value.length > 0);
+                            }}
+                            onFocus={() => searchQuery && setShowSearch(true)}
+                            onBlur={() => setTimeout(() => setShowSearch(false), 200)}
+                            className="bg-transparent text-white placeholder-white/70 focus:text-gray-800 focus:placeholder-gray-400 text-sm py-1.5 px-2 outline-none w-full rounded-md"
                         />
-                    </Link>
+                    </div>
+                    {showSearch && (
+                        <SearchModal
+                            backendQuery={searchQuery}
+                            searchElem={searchElem}
+                            setShowModal={setShowSearch}
+                        />
+                    )}
                 </div>
+            </div>
 
-                <div className="header__section">
-                    <ul className="header__list">
-                        <li className="header__li header__li--profile">
-                            <ProfilePic
-                                user={authUser}
-                                large={true}
-                            />
+            {/* Right: profile */}
+            <div className="flex items-center gap-2 shrink-0">
+                <Link
+                    to="/register"
+                    className="flex items-center gap-2 text-white/90 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                >
+                    <ProfilePic user={authUser} large/>
+                    <span className="hidden sm:inline">Hello, {userName}</span>
+                </Link>
+            </div>
 
-                            <Link
-                                to="/register"
-                                className="header__user-link"
-                            >
-                                Hello, {userName}
-                            </Link>
-                        </li>
-                    </ul>
-                </div>
-
-                <div className="out-of-focus"/>
-            </header>
-        </>
+            {/* blur overlay for modals */}
+            <div className="out-of-focus hidden fixed inset-0 z-40"/>
+        </header>
     );
 };
 

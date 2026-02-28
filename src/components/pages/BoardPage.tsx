@@ -4,9 +4,8 @@ import Board from "./Board";
 const BoardPage = () => {
     const {boardId} = useParams<{ boardId: string }>();
 
-    if (!boardId) {
-        return;
-    }
+    if (!boardId) return null;
+
     const id = parseInt(boardId);
     return <Board boardId={id}/>;
 };

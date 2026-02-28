@@ -26,6 +26,8 @@ export interface User {
 export interface Item {
     id: string;
     title: string;
+    description: string;
+    status: string;
     order: string;
     list: string;
 }
@@ -76,9 +78,10 @@ export const mockBoards: Board[] = [
     },
 ];
 
-
 export interface BoardFull {
     id: number;
     title: string;
+    color?: string;
+    image_url?: string;
     lists: List[];
 }

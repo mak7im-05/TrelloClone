@@ -18,32 +18,44 @@ const hashName = (str: string): number => {
     return res + 1;
 };
 
-const colors = ["red", "yellow", "blue"];
+const BG_COLORS = [
+    "bg-red-500",
+    "bg-yellow-500",
+    "bg-blue-500",
+    "bg-green-500",
+    "bg-purple-500",
+    "bg-pink-500",
+];
 
-const getNameColor = (name: string): string => {
-    return colors[hashName(name) % colors.length];
-};
+const getNameColor = (name: string): string =>
+    BG_COLORS[hashName(name) % BG_COLORS.length];
 
-const ProfilePic: React.FC<ProfilePicProps> = ({ user, large = false }) => {
+const ProfilePic: React.FC<ProfilePicProps> = ({user, large = false}) => {
+    const sizeClass = large
+        ? "w-8 h-8 text-sm"
+        : "w-7 h-7 text-xs";
+
+    const base = `${sizeClass} rounded-full flex items-center justify-center font-semibold text-white flex-shrink-0 select-none`;
+
     if (!user) {
+        return <div className={`${base} bg-blue-500`}>U</div>;
+    }
+
+    if (user.profile_pic) {
         return (
-            <div className={`member member--blue${large ? " member--large" : ""}`}>
-                U
+            <div className={`${base} overflow-hidden`}>
+                <img
+                    src={user.profile_pic}
+                    alt={user.full_name}
+                    className="w-full h-full object-cover"
+                />
             </div>
         );
     }
 
-    return user.profile_pic ? (
-        <div className={`member member--image${large ? " member--large" : ""}`}>
-            <img src={user.profile_pic} alt={user.full_name} />
-        </div>
-    ) : (
-        <div
-            className={`member member--${getNameColor(user.full_name)}${
-                large ? " member--large" : ""
-            }`}
-        >
-            {user.full_name.substring(0, 1)}
+    return (
+        <div className={`${base} ${getNameColor(user.full_name)}`}>
+            {user.full_name.charAt(0).toUpperCase()}
         </div>
     );
 };

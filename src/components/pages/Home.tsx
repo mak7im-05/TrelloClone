@@ -3,10 +3,10 @@ import {Link} from "react-router-dom";
 
 import AddBoardModal from "../modal/AddBoardModel";
 import HomeBoard from "../boards/HomeBoard";
+import HomeSidebar from "../sidebars/HomeSidebar";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import {filterBoards} from "../../static/ts/board";
-
-import {type Board, mockBoards,} from "../../static/ts/mockData";
+import {type Board, mockBoards} from "../../static/ts/mockData";
 
 const Home: React.FC = () => {
     useDocumentTitle("Boards | Trello");
@@ -20,103 +20,103 @@ const Home: React.FC = () => {
     };
 
     const replaceBoard = (updated: Board) => {
-        setBoards((prev) =>
-            prev.map((b) => (b.id === updated.id ? updated : b))
-        );
+        setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
     };
 
-    const [userBoards, projectBoards, starredBoards] =
-        filterBoards(boards);
+    const [userBoards, projectBoards, starredBoards] = filterBoards(boards);
 
     return (
-        <>
-            <div className="home-wrapper">
-                <div className="home">
-                    {starredBoards.length !== 0 && (
-                        <>
-                            <div className="home__section">
-                                <p className="home__title">
-                                    <i className="fal fa-star"></i>{" "}
-                                    Starred Boards
-                                </p>
-                            </div>
-                            <div className="home__boards">
+        <div className="min-h-screen bg-gray-50 pt-14">
+            <div className="max-w-6xl mx-auto px-4 py-8 flex gap-8">
+                <HomeSidebar projects={projectBoards.map((p) => ({id: p.id, title: p.title}))}/>
+
+                <main className="flex-1 min-w-0">
+                    {/* Starred */}
+                    {starredBoards.length > 0 && (
+                        <section className="mb-8">
+                            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
+                                <i className="fal fa-star text-yellow-500"/>
+                                Starred Boards
+                            </h2>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {starredBoards.map((board) => (
-                                    <HomeBoard
-                                        key={board.id}
-                                        board={board}
-                                        replaceBoard={replaceBoard}
-                                    />
+                                    <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
                                 ))}
                             </div>
-                        </>
+                        </section>
                     )}
 
-                    <div className="home__section">
-                        <p className="home__title">
-                            <i className="fal fa-user"></i>{" "}
-                            Personal Boards
-                        </p>
-                        <button
-                            className="btn"
-                            onClick={() => {
-                                setBoardProject(0);
-                                setShowAddBoardModal(true);
-                            }}
-                        >
-                            <i className="fal fa-plus"></i> Create
-                        </button>
-                    </div>
+                    {/* Personal */}
+                    <section className="mb-8">
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                <i className="fal fa-user"/>
+                                Personal Boards
+                            </h2>
+                            <button
+                                className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                                onClick={() => {
+                                    setBoardProject(0);
+                                    setShowAddBoardModal(true);
+                                }}
+                            >
+                                <i className="fal fa-plus"/> Create
+                            </button>
+                        </div>
 
-                    <div className="home__boards">
-                        {userBoards.map((board) => (
-                            <HomeBoard
-                                key={board.id}
-                                board={board}
-                                replaceBoard={replaceBoard}
-                            />
-                        ))}
-                    </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                            {userBoards.map((board) => (
+                                <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
+                            ))}
+                            {/* Create new board tile */}
+                            <button
+                                onClick={() => {
+                                    setBoardProject(0);
+                                    setShowAddBoardModal(true);
+                                }}
+                                className="rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors flex items-center justify-center text-gray-500 text-sm font-medium"
+                                style={{minHeight: "96px"}}
+                            >
+                                + Create new board
+                            </button>
+                        </div>
+                    </section>
 
+                    {/* Project boards */}
                     {projectBoards.map((project) => (
-                        <React.Fragment key={project.id}>
-                            <div className="home__section">
-                                <p className="home__title">
-                                    <i className="fal fa-users"></i>{" "}
+                        <section key={project.id} className="mb-8">
+                            <div className="flex items-center justify-between mb-3">
+                                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+                                    <i className="fal fa-users"/>
                                     {project.title}
-                                </p>
-                                <div>
+                                </h2>
+                                <div className="flex items-center gap-2">
                                     <Link
-                                        className="btn btn--secondary"
+                                        className="text-xs text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
                                         to={`/p/${project.id}`}
                                     >
                                         Boards
                                     </Link>
-                                    <a
-                                        className="btn"
+                                    <button
+                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
                                         onClick={() => {
                                             setBoardProject(project.id);
                                             setShowAddBoardModal(true);
                                         }}
                                     >
-                                        <i className="fal fa-plus"></i>{" "}
-                                        Create
-                                    </a>
+                                        <i className="fal fa-plus"/> Create
+                                    </button>
                                 </div>
                             </div>
 
-                            <div className="home__boards">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {project.boards.map((board: Board) => (
-                                    <HomeBoard
-                                        key={board.id}
-                                        board={board}
-                                        replaceBoard={replaceBoard}
-                                    />
+                                    <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
                                 ))}
                             </div>
-                        </React.Fragment>
+                        </section>
                     ))}
-                </div>
+                </main>
             </div>
 
             {showAddBoardModal && (
@@ -126,7 +126,7 @@ const Home: React.FC = () => {
                     project={boardProject}
                 />
             )}
-        </>
+        </div>
     );
 };
 
