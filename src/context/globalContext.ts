@@ -1,11 +1,13 @@
 import React from "react";
 import type {Board, User} from "../static/ts/mockData.ts";
+import type {AuthUser} from "../api/auth.ts";
 
 export interface GlobalContextType {
-    authUser: User | null;
+    authUser: AuthUser | null;
     checkedAuth: boolean;
     board: Board | null;
     setBoard: React.Dispatch<React.SetStateAction<Board | null>> | null;
+    logout: () => void;
 }
 
 const globalContext = React.createContext<GlobalContextType>({
@@ -13,6 +15,7 @@ const globalContext = React.createContext<GlobalContextType>({
     checkedAuth: false,
     board: null,
     setBoard: null,
+    logout: () => {},
 });
 
 export default globalContext;

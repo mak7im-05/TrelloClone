@@ -1,33 +1,75 @@
-import { useState } from "react";
-import { useLocation, Routes, Route } from "react-router-dom";
+import {useEffect, useState} from "react";
+import {useLocation, useNavigate, Routes, Route} from "react-router-dom";
 import Header from "./components/header/Header";
 import Home from "./components/pages/Home.tsx";
 import BoardPage from "./components/pages/BoardPage";
 import AuthPage from "./components/pages/AuthPage.tsx";
 import globalContext from "./context/globalContext";
-import type { Board } from "./static/ts/mockData";
-import { mockUsers } from "./static/ts/mockData";
+import type {Board} from "./static/ts/mockData";
+import {fetchMe, getToken, removeToken, type AuthUser} from "./api/auth";
 
 function App() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [board, setBoard] = useState<Board | null>(null);
+    const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+    const [checkedAuth, setCheckedAuth] = useState(false);
 
-    const showHeader = location.pathname !== "/register";
+    useEffect(() => {
+        const token = getToken();
+        if (!token) {
+            setCheckedAuth(true);
+            return;
+        }
+        fetchMe()
+            .then((user) => setAuthUser(user))
+            .catch(() => removeToken())
+            .finally(() => setCheckedAuth(true));
+    }, []);
+
+    useEffect(() => {
+        if (!checkedAuth) return;
+        if (!authUser && location.pathname !== "/register") {
+            navigate("/register", {replace: true});
+        }
+    }, [checkedAuth, authUser, location.pathname, navigate]);
+
+    const logout = () => {
+        removeToken();
+        setAuthUser(null);
+        navigate("/register", {replace: true});
+    };
+
+    const handleAuth = (user: AuthUser) => {
+        setAuthUser(user);
+        navigate("/", {replace: true});
+    };
+
+    const showHeader = location.pathname !== "/register" && authUser;
+
+    if (!checkedAuth) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-gray-400 text-lg">Loading...</div>
+            </div>
+        );
+    }
 
     return (
         <globalContext.Provider
             value={{
-                authUser: mockUsers[0],
-                checkedAuth: true,
+                authUser,
+                checkedAuth,
                 board,
                 setBoard,
+                logout,
             }}
         >
-            {showHeader && <Header location={location} />}
+            {showHeader && <Header location={location}/>}
             <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/b/:boardId" element={<BoardPage />} />
-                <Route path="/register" element={<AuthPage />} />
+                <Route path="/" element={<Home/>}/>
+                <Route path="/b/:boardId" element={<BoardPage/>}/>
+                <Route path="/register" element={<AuthPage onAuth={handleAuth}/>}/>
             </Routes>
         </globalContext.Provider>
     );

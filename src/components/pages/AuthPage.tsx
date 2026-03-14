@@ -1,21 +1,38 @@
 import React, {useState} from "react";
 import logo from "../../static/img/logo.png";
 import slideshowBg from "../../static/img/slideshow-1.jpg";
+import {apiLogin, apiRegister, type AuthUser} from "../../api/auth";
 
 type Mode = "login" | "register";
 
-const AuthPage: React.FC = () => {
+interface AuthPageProps {
+    onAuth: (user: AuthUser) => void;
+}
+
+const AuthPage: React.FC<AuthPageProps> = ({onAuth}) => {
     const [mode, setMode] = useState<Mode>("login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [fullName, setFullName] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const onSubmit = (e: React.FormEvent) => {
+    const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (mode === "register") {
-            console.log("REGISTER", {fullName, email, password});
-        } else {
-            console.log("LOGIN", {email, password});
+        setError("");
+        setLoading(true);
+        try {
+            let user: AuthUser;
+            if (mode === "register") {
+                user = await apiRegister(email, password, fullName || undefined);
+            } else {
+                user = await apiLogin(email, password);
+            }
+            onAuth(user);
+        } catch (err: any) {
+            setError(err.message || "Something went wrong");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -37,6 +54,12 @@ const AuthPage: React.FC = () => {
                         : "Start organizing your work today."}
                 </p>
 
+                {error && (
+                    <div className="mb-4 p-3 rounded-lg bg-red-50 text-red-600 text-sm">
+                        {error}
+                    </div>
+                )}
+
                 <form className="space-y-4" onSubmit={onSubmit}>
                     {mode === "register" && (
                         <input
@@ -45,7 +68,6 @@ const AuthPage: React.FC = () => {
                             value={fullName}
                             onChange={(e) => setFullName(e.target.value)}
                             className={inputClass}
-                            required
                         />
                     )}
                     <input
@@ -66,9 +88,10 @@ const AuthPage: React.FC = () => {
                     />
                     <button
                         type="submit"
-                        className="w-full py-3 bg-[#0052cc] hover:bg-[#0065ff] text-white font-semibold rounded-lg transition-colors text-sm"
+                        disabled={loading}
+                        className="w-full py-3 bg-[#0052cc] hover:bg-[#0065ff] disabled:opacity-50 text-white font-semibold rounded-lg transition-colors text-sm"
                     >
-                        {mode === "login" ? "Log in" : "Sign up"}
+                        {loading ? "Please wait..." : mode === "login" ? "Log in" : "Sign up"}
                     </button>
                 </form>
 
@@ -77,7 +100,10 @@ const AuthPage: React.FC = () => {
                         <>
                             Don&apos;t have an account?{" "}
                             <button
-                                onClick={() => setMode("register")}
+                                onClick={() => {
+                                    setMode("register");
+                                    setError("");
+                                }}
                                 className="text-[#0052cc] hover:underline font-medium bg-transparent border-none cursor-pointer"
                             >
                                 Sign up
@@ -87,7 +113,10 @@ const AuthPage: React.FC = () => {
                         <>
                             Already have an account?{" "}
                             <button
-                                onClick={() => setMode("login")}
+                                onClick={() => {
+                                    setMode("login");
+                                    setError("");
+                                }}
                                 className="text-[#0052cc] hover:underline font-medium bg-transparent border-none cursor-pointer"
                             >
                                 Log in

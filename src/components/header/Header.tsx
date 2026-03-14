@@ -26,7 +26,8 @@ const Header: React.FC<HeaderProps> = ({location}) => {
         [board]
     );
 
-    const userName = authUser?.full_name.replace(/ .*/, "") || "User";
+    const {logout} = useContext(globalContext);
+    const userName = authUser?.name || authUser?.email?.split("@")[0] || "User";
 
     const transparent = isBackgroundDark && onBoardPage;
 
@@ -81,13 +82,16 @@ const Header: React.FC<HeaderProps> = ({location}) => {
 
             {/* Right: profile */}
             <div className="flex items-center gap-2 shrink-0">
-                <Link
-                    to="/register"
-                    className="flex items-center gap-2 text-white/90 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
-                >
-                    <ProfilePic user={authUser} large/>
+                <div className="flex items-center gap-2 text-white/90 text-sm px-2 py-1">
+                    <ProfilePic user={authUser ? {id: authUser.id, full_name: userName} : null} large/>
                     <span className="hidden sm:inline">Hello, {userName}</span>
-                </Link>
+                </div>
+                <button
+                    onClick={logout}
+                    className="text-white/70 hover:text-white text-sm px-2 py-1 rounded hover:bg-white/10 transition-colors"
+                >
+                    Logout
+                </button>
             </div>
 
             {/* blur overlay for modals */}
