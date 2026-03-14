@@ -1,6 +1,6 @@
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {Link} from "react-router-dom";
-import {fetchBoards, type BoardSummary} from "../../api/boards";
+import {searchBoards, type BoardSummary} from "../../api/boards";
 
 interface SearchModalProps {
     backendQuery: string;
@@ -9,20 +9,16 @@ interface SearchModalProps {
 }
 
 const SearchModal: React.FC<SearchModalProps> = ({backendQuery}) => {
-    const [boards, setBoards] = useState<BoardSummary[]>([]);
+    const [foundBoards, setFoundBoards] = useState<BoardSummary[]>([]);
 
     useEffect(() => {
-        fetchBoards().then(setBoards).catch(() => {});
-    }, []);
-
-    const normalizedQuery = backendQuery.trim().toLowerCase();
-
-    const foundBoards = useMemo(() => {
-        if (!normalizedQuery) return [];
-        return boards.filter((board) =>
-            board.title.toLowerCase().includes(normalizedQuery)
-        );
-    }, [normalizedQuery, boards]);
+        const q = backendQuery.trim();
+        if (!q) {
+            setFoundBoards([]);
+            return;
+        }
+        searchBoards(q).then(setFoundBoards).catch(() => setFoundBoards([]));
+    }, [backendQuery]);
 
     return (
         <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">

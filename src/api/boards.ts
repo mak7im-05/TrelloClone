@@ -169,3 +169,47 @@ export function createComment(cardId: number, body: string): Promise<CommentResp
 export function deleteComment(id: number): Promise<void> {
     return request(`/api/comments/${id}`, { method: 'DELETE' });
 }
+
+// ─── Attachment API ──────────────────────────────────────────────────────────
+
+export interface AttachmentResponse {
+    id: number;
+    filename: string;
+    url: string;
+    createdAt: string;
+    cardId: number;
+}
+
+export function fetchAttachments(cardId: number): Promise<AttachmentResponse[]> {
+    return request(`/api/cards/${cardId}/attachments`);
+}
+
+export async function uploadAttachment(cardId: number, file: File): Promise<AttachmentResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const token = getToken();
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    const res = await fetch(`${API_BASE}/api/cards/${cardId}/attachments`, {
+        method: 'POST',
+        headers,
+        body: formData,
+    });
+    if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || res.statusText);
+    }
+    return res.json();
+}
+
+export function deleteAttachment(id: number): Promise<void> {
+    return request(`/api/attachments/${id}`, { method: 'DELETE' });
+}
+
+// ─── Search API ──────────────────────────────────────────────────────────────
+
+export function searchBoards(q: string): Promise<BoardSummary[]> {
+    return request(`/api/search/boards?q=${encodeURIComponent(q)}`);
+}

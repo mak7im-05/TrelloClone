@@ -1,7 +1,10 @@
 import React, {useEffect, useRef, useState} from "react";
 import {timeSince} from "../../static/ts/util";
-import type {CardResponse, CommentResponse} from "../../api/boards";
-import {fetchComments, createComment, deleteComment} from "../../api/boards";
+import type {CardResponse, CommentResponse, AttachmentResponse} from "../../api/boards";
+import {
+    fetchComments, createComment, deleteComment,
+    fetchAttachments, uploadAttachment, deleteAttachment,
+} from "../../api/boards";
 
 export interface EditCardModalProps {
     card: CardResponse;
@@ -21,12 +24,14 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
     const [editingTitle, setEditingTitle] = useState(false);
     const [editingDescription, setEditingDescription] = useState(false);
     const [comments, setComments] = useState<CommentResponse[]>([]);
+    const [attachments, setAttachments] = useState<AttachmentResponse[]>([]);
+    const [uploading, setUploading] = useState(false);
     const commentRef = useRef<HTMLTextAreaElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        fetchComments(card.id)
-            .then(setComments)
-            .catch(() => {});
+        fetchComments(card.id).then(setComments).catch(() => {});
+        fetchAttachments(card.id).then(setAttachments).catch(() => {});
     }, [card.id]);
 
     const handleSave = () => {
@@ -45,6 +50,26 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
     const removeComment = async (id: number) => {
         await deleteComment(id);
         setComments((prev) => prev.filter((c) => c.id !== id));
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const att = await uploadAttachment(card.id, file);
+            setAttachments((prev) => [att, ...prev]);
+        } catch (err) {
+            console.error("Upload failed:", err);
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const handleDeleteAttachment = async (id: number) => {
+        await deleteAttachment(id);
+        setAttachments((prev) => prev.filter((a) => a.id !== id));
     };
 
     const statusColor: Record<string, string> = {
@@ -191,6 +216,55 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
                             >
                                 + Add a description...
                             </button>
+                        )}
+                    </div>
+
+                    {/* Attachments */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Attachments</p>
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={uploading}
+                                className="text-xs text-blue-600 hover:underline disabled:text-gray-400"
+                            >
+                                {uploading ? "Uploading..." : "+ Add file"}
+                            </button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                className="hidden"
+                                onChange={handleFileUpload}
+                            />
+                        </div>
+
+                        {attachments.length === 0 ? (
+                            <p className="text-sm text-gray-400 italic">No attachments yet.</p>
+                        ) : (
+                            <ul className="space-y-2">
+                                {attachments.map((att) => (
+                                    <li key={att.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-200">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <i className="fal fa-paperclip text-gray-400 flex-shrink-0"/>
+                                            <a
+                                                href={att.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-blue-600 hover:underline truncate"
+                                            >
+                                                {att.filename}
+                                            </a>
+                                            <span className="text-xs text-gray-400 flex-shrink-0">{timeSince(att.createdAt)}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleDeleteAttachment(att.id)}
+                                            className="text-gray-400 hover:text-red-500 text-sm ml-2 flex-shrink-0"
+                                        >
+                                            <i className="fal fa-trash"/>
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
                         )}
                     </div>
 
