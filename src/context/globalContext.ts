@@ -1,5 +1,5 @@
 import React from "react";
-import type {Board, User} from "../static/ts/mockData.ts";
+import type {Board} from "../static/ts/mockData.ts";
 import type {AuthUser} from "../api/auth.ts";
 
 export interface GlobalContextType {
