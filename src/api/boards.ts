@@ -213,3 +213,58 @@ export function deleteAttachment(id: number): Promise<void> {
 export function searchBoards(q: string): Promise<BoardSummary[]> {
     return request(`/api/search/boards?q=${encodeURIComponent(q)}`);
 }
+
+// ─── Members API ─────────────────────────────────────────────────────────────
+
+export interface MemberResponse {
+    id: number;
+    role: string;
+    userId: number;
+    boardId: number;
+    user: { id: number; email: string; name: string | null };
+}
+
+export function fetchMembers(boardId: number): Promise<MemberResponse[]> {
+    return request(`/api/boards/${boardId}/members`);
+}
+
+export function addMember(boardId: number, userId: number, role = 'member'): Promise<MemberResponse> {
+    return request(`/api/boards/${boardId}/members`, {
+        method: 'POST',
+        body: JSON.stringify({ userId, role }),
+    });
+}
+
+export function updateMemberRole(boardId: number, userId: number, role: string): Promise<MemberResponse> {
+    return request(`/api/boards/${boardId}/members/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role }),
+    });
+}
+
+export function removeMember(boardId: number, userId: number): Promise<void> {
+    return request(`/api/boards/${boardId}/members/${userId}`, { method: 'DELETE' });
+}
+
+// ─── Card Assignees API ──────────────────────────────────────────────────────
+
+export interface AssigneeResponse {
+    cardId: number;
+    userId: number;
+    user: { id: number; email: string; name: string | null };
+}
+
+export function fetchAssignees(cardId: number): Promise<AssigneeResponse[]> {
+    return request(`/api/cards/${cardId}/assignees`);
+}
+
+export function assignCard(cardId: number, userId: number): Promise<AssigneeResponse> {
+    return request(`/api/cards/${cardId}/assignees`, {
+        method: 'POST',
+        body: JSON.stringify({ userId }),
+    });
+}
+
+export function unassignCard(cardId: number, userId: number): Promise<void> {
+    return request(`/api/cards/${cardId}/assignees/${userId}`, { method: 'DELETE' });
+}

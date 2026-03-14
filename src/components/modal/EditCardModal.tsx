@@ -1,9 +1,10 @@
 import React, {useEffect, useRef, useState} from "react";
 import {timeSince} from "../../static/ts/util";
-import type {CardResponse, CommentResponse, AttachmentResponse} from "../../api/boards";
+import type {CardResponse, CommentResponse, AttachmentResponse, MemberResponse, AssigneeResponse} from "../../api/boards";
 import {
     fetchComments, createComment, deleteComment,
     fetchAttachments, uploadAttachment, deleteAttachment,
+    fetchAssignees, assignCard, unassignCard,
 } from "../../api/boards";
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -11,6 +12,7 @@ const API_BASE = import.meta.env.VITE_API_URL || '';
 export interface EditCardModalProps {
     card: CardResponse;
     listName: string;
+    boardMembers: MemberResponse[];
     onClose: () => void;
     onSave: (updated: CardResponse) => void;
 }
@@ -21,12 +23,13 @@ const STATUS_OPTIONS = [
     {value: "done", label: "Done"},
 ];
 
-const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, onSave}) => {
+const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembers, onClose, onSave}) => {
     const [cardState, setCardState] = useState<CardResponse>(card);
     const [editingTitle, setEditingTitle] = useState(false);
     const [editingDescription, setEditingDescription] = useState(false);
     const [comments, setComments] = useState<CommentResponse[]>([]);
     const [attachments, setAttachments] = useState<AttachmentResponse[]>([]);
+    const [assignees, setAssignees] = useState<AssigneeResponse[]>([]);
     const [uploading, setUploading] = useState(false);
     const commentRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +37,21 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
     useEffect(() => {
         fetchComments(card.id).then(setComments).catch(() => {});
         fetchAttachments(card.id).then(setAttachments).catch(() => {});
+        fetchAssignees(card.id).then(setAssignees).catch(() => {});
     }, [card.id]);
+
+    const handleAssign = async (userId: number) => {
+        const a = await assignCard(card.id, userId);
+        setAssignees((prev) => [...prev, a]);
+    };
+
+    const handleUnassign = async (userId: number) => {
+        await unassignCard(card.id, userId);
+        setAssignees((prev) => prev.filter((a) => a.userId !== userId));
+    };
+
+    const assignedIds = new Set(assignees.map((a) => a.userId));
+    const unassignedMembers = boardMembers.filter((m) => !assignedIds.has(m.userId));
 
     const handleSave = () => {
         onSave(cardState);
@@ -267,6 +284,46 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
                                     </li>
                                 ))}
                             </ul>
+                        )}
+                    </div>
+
+                    {/* Assignees */}
+                    <div>
+                        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Assigned Members</p>
+                        {assignees.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-2">
+                                {assignees.map((a) => (
+                                    <div key={a.userId} className="flex items-center gap-1.5 bg-white rounded-full px-2 py-1 border border-gray-200">
+                                        <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                                            {(a.user.name || a.user.email)[0].toUpperCase()}
+                                        </div>
+                                        <span className="text-xs text-gray-700">{a.user.name || a.user.email}</span>
+                                        <button
+                                            onClick={() => handleUnassign(a.userId)}
+                                            className="text-gray-400 hover:text-red-500 text-xs ml-1"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {unassignedMembers.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                                {unassignedMembers.map((m) => (
+                                    <button
+                                        key={m.userId}
+                                        onClick={() => handleAssign(m.userId)}
+                                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-full px-2 py-1 transition-colors"
+                                    >
+                                        <span>+</span>
+                                        <span>{m.user.name || m.user.email}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {assignees.length === 0 && unassignedMembers.length === 0 && (
+                            <p className="text-sm text-gray-400 italic">No members to assign.</p>
                         )}
                     </div>
 

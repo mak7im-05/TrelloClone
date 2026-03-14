@@ -15,9 +15,13 @@ import {
     deleteCard as apiDeleteCard,
     moveCard,
     reorderCards,
+    fetchMembers,
+    addMember,
+    removeMember,
     type BoardFull,
     type ListResponse,
     type CardResponse,
+    type MemberResponse,
 } from "../../api/boards";
 
 interface BoardProps {
@@ -34,6 +38,9 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
     const listInputRef = useRef<HTMLInputElement>(null);
 
     const [activeCard, setActiveCard] = useState<{ listId: number; card: CardResponse } | null>(null);
+    const [members, setMembers] = useState<MemberResponse[]>([]);
+    const [showMembers, setShowMembers] = useState(false);
+    const [inviteEmail, setInviteEmail] = useState("");
 
     useEffect(() => {
         setLoading(true);
@@ -50,6 +57,7 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
             })
             .catch((err) => console.error("Failed to load board:", err))
             .finally(() => setLoading(false));
+        fetchMembers(boardId).then(setMembers).catch(() => {});
     }, [boardId, setGlobalBoard]);
 
     useDocumentTitle(board ? `${board.title} | Trello` : "Loading...");
@@ -177,6 +185,95 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
         <div className="min-h-screen pt-14" style={boardStyle}>
             <div className="px-4 py-3 bg-black/10 backdrop-blur-sm flex items-center gap-3">
                 <h1 className="text-white font-bold text-lg drop-shadow">{board.title}</h1>
+                <div className="ml-auto flex items-center gap-2">
+                    {/* Member avatars */}
+                    <div className="flex -space-x-2">
+                        {members.slice(0, 5).map((m) => (
+                            <div
+                                key={m.userId}
+                                className="w-8 h-8 rounded-full bg-blue-500 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold"
+                                title={`${m.user.name || m.user.email} (${m.role})`}
+                            >
+                                {(m.user.name || m.user.email)[0].toUpperCase()}
+                            </div>
+                        ))}
+                        {members.length > 5 && (
+                            <div className="w-8 h-8 rounded-full bg-gray-500 border-2 border-white/30 flex items-center justify-center text-white text-xs font-bold">
+                                +{members.length - 5}
+                            </div>
+                        )}
+                    </div>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowMembers(!showMembers)}
+                            className="text-white/80 hover:text-white text-sm px-3 py-1.5 rounded-lg hover:bg-white/10 transition-colors"
+                        >
+                            <i className="fal fa-user-plus mr-1"/> Members
+                        </button>
+                        {showMembers && (
+                            <div
+                                className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 p-3"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Board Members</p>
+                                <ul className="space-y-2 mb-3 max-h-48 overflow-y-auto">
+                                    {members.map((m) => (
+                                        <li key={m.userId} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                                                    {(m.user.name || m.user.email)[0].toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm text-gray-800">{m.user.name || m.user.email}</p>
+                                                    <p className="text-xs text-gray-400">{m.role}</p>
+                                                </div>
+                                            </div>
+                                            {m.role !== 'admin' && (
+                                                <button
+                                                    onClick={async () => {
+                                                        await removeMember(boardId, m.userId);
+                                                        setMembers((prev) => prev.filter((x) => x.userId !== m.userId));
+                                                    }}
+                                                    className="text-gray-400 hover:text-red-500 text-xs"
+                                                >
+                                                    <i className="fal fa-times"/>
+                                                </button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                                <form
+                                    onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        const id = parseInt(inviteEmail);
+                                        if (!id) return;
+                                        try {
+                                            const m = await addMember(boardId, id);
+                                            setMembers((prev) => [...prev, m]);
+                                            setInviteEmail("");
+                                        } catch (err) {
+                                            console.error(err);
+                                        }
+                                    }}
+                                    className="flex gap-2"
+                                >
+                                    <input
+                                        value={inviteEmail}
+                                        onChange={(e) => setInviteEmail(e.target.value)}
+                                        placeholder="User ID"
+                                        className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-blue-400"
+                                    />
+                                    <button
+                                        type="submit"
+                                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium"
+                                    >
+                                        Add
+                                    </button>
+                                </form>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
 
             <DragDropContext onDragEnd={onDragEnd}>
@@ -258,6 +355,7 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                 <EditCardModal
                     card={activeCard.card}
                     listName={board.lists.find((l) => l.id === activeCard.listId)?.title ?? ""}
+                    boardMembers={members}
                     onClose={() => setActiveCard(null)}
                     onSave={(updated) => {
                         handleUpdateCard(updated);
