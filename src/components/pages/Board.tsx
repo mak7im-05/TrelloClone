@@ -1,40 +1,24 @@
 import React, {useContext, useEffect, useRef, useState} from "react";
 import type {DropResult} from "@hello-pangea/dnd";
 import {DragDropContext, Draggable, Droppable} from "@hello-pangea/dnd";
-import type {Item, List as ListType} from "../../static/ts/mockData";
-import {mockBoards} from "../../static/ts/mockData";
-import type {BoardFull} from "../../static/ts/mockData";
 import globalContext from "../../context/globalContext";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
-import EditCardModal, {type CardFull} from "../modal/EditCardModal";
-
-const MOCK_LISTS: ListType[] = [
-    {
-        id: "list-1",
-        title: "To Do",
-        order: "1",
-        items: [
-            {id: "card-1", title: "Research competitors", description: "Look at Trello, Asana, Linear", status: "todo", order: "1", list: "list-1"},
-            {id: "card-2", title: "Design wireframes", description: "", status: "todo", order: "2", list: "list-1"},
-        ],
-    },
-    {
-        id: "list-2",
-        title: "In Progress",
-        order: "2",
-        items: [
-            {id: "card-3", title: "Build frontend", description: "React + Tailwind", status: "in_progress", order: "1", list: "list-2"},
-        ],
-    },
-    {
-        id: "list-3",
-        title: "Done",
-        order: "3",
-        items: [
-            {id: "card-4", title: "Setup Vite", description: "Configured build tooling", status: "done", order: "1", list: "list-3"},
-        ],
-    },
-];
+import EditCardModal from "../modal/EditCardModal";
+import {
+    fetchBoard,
+    createList,
+    updateList,
+    deleteList as apiDeleteList,
+    reorderLists,
+    createCard,
+    updateCard as apiUpdateCard,
+    deleteCard as apiDeleteCard,
+    moveCard,
+    reorderCards,
+    type BoardFull,
+    type ListResponse,
+    type CardResponse,
+} from "../../api/boards";
 
 interface BoardProps {
     boardId: number;
@@ -42,27 +26,30 @@ interface BoardProps {
 
 const Board: React.FC<BoardProps> = ({boardId}) => {
     const [board, setBoard] = useState<BoardFull | null>(null);
+    const [loading, setLoading] = useState(true);
     const {setBoard: setGlobalBoard} = useContext(globalContext);
 
     const [addingList, setAddingList] = useState(false);
     const [listTitle, setListTitle] = useState("");
     const listInputRef = useRef<HTMLInputElement>(null);
 
-    const [activeCard, setActiveCard] = useState<{listId: string; card: CardFull} | null>(null);
+    const [activeCard, setActiveCard] = useState<{ listId: number; card: CardResponse } | null>(null);
 
     useEffect(() => {
-        const found = mockBoards.find((b) => b.id === boardId);
-        if (!found) return;
-
-        setBoard({
-            id: found.id,
-            title: found.title,
-            color: found.color,
-            image_url: found.image_url,
-            lists: JSON.parse(JSON.stringify(MOCK_LISTS)),
-        });
-
-        setGlobalBoard?.(found);
+        setLoading(true);
+        fetchBoard(boardId)
+            .then((data) => {
+                setBoard(data);
+                setGlobalBoard?.({
+                    id: data.id,
+                    title: data.title,
+                    is_starred: data.isStarred,
+                    color: data.color ?? undefined,
+                    image_url: data.imageUrl ?? undefined,
+                });
+            })
+            .catch((err) => console.error("Failed to load board:", err))
+            .finally(() => setLoading(false));
     }, [boardId, setGlobalBoard]);
 
     useDocumentTitle(board ? `${board.title} | Trello` : "Loading...");
@@ -71,87 +58,74 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
         if (addingList) listInputRef.current?.focus();
     }, [addingList]);
 
-    // ─── Board operations ─────────────────────────────────────────────────────
+    // ─── List operations ──────────────────────────────────────────────────────
 
-    const addList = () => {
+    const addList = async () => {
         if (!board || !listTitle.trim()) return;
-        setBoard({
-            ...board,
-            lists: [
-                ...board.lists,
-                {
-                    id: `list-${Date.now()}`,
-                    title: listTitle.trim(),
-                    order: String(board.lists.length + 1),
-                    items: [],
-                },
-            ],
-        });
+        const newList = await createList(boardId, {title: listTitle.trim()});
+        setBoard({...board, lists: [...board.lists, {...newList, cards: []}]});
         setListTitle("");
         setAddingList(false);
     };
 
-    const updateListTitle = (listId: string, title: string) => {
+    const updateListTitle = async (listId: number, title: string) => {
         if (!board || !title.trim()) return;
+        await updateList(listId, {title});
         setBoard({
             ...board,
             lists: board.lists.map((l) => (l.id === listId ? {...l, title} : l)),
         });
     };
 
-    const deleteList = (listId: string) => {
+    const deleteList = async (listId: number) => {
         if (!board) return;
+        await apiDeleteList(listId);
         setBoard({...board, lists: board.lists.filter((l) => l.id !== listId)});
     };
 
-    const addCard = (listId: string, title: string) => {
+    // ─── Card operations ──────────────────────────────────────────────────────
+
+    const addCard = async (listId: number, title: string) => {
         if (!board || !title.trim()) return;
+        const newCard = await createCard(listId, {title: title.trim()});
         setBoard({
             ...board,
             lists: board.lists.map((l) =>
-                l.id === listId
-                    ? {
-                        ...l,
-                        items: [
-                            ...l.items,
-                            {
-                                id: `card-${Date.now()}`,
-                                title: title.trim(),
-                                description: "",
-                                status: "todo",
-                                order: String(l.items.length + 1),
-                                list: listId,
-                            },
-                        ],
-                    }
-                    : l
+                l.id === listId ? {...l, cards: [...l.cards, newCard]} : l
             ),
         });
     };
 
-    const updateCard = (listId: string, updatedCard: Item) => {
+    const handleUpdateCard = async (card: CardResponse) => {
         if (!board) return;
+        const updated = await apiUpdateCard(card.id, {
+            title: card.title,
+            description: card.description ?? undefined,
+            status: card.status,
+        });
         setBoard({
             ...board,
-            lists: board.lists.map((l) =>
-                l.id === listId
-                    ? {...l, items: l.items.map((c) => (c.id === updatedCard.id ? updatedCard : c))}
-                    : l
-            ),
+            lists: board.lists.map((l) => ({
+                ...l,
+                cards: l.cards.map((c) => (c.id === updated.id ? updated : c)),
+            })),
         });
     };
 
-    const deleteCard = (listId: string, cardId: string) => {
+    const deleteCard = async (listId: number, cardId: number) => {
         if (!board) return;
+        await apiDeleteCard(cardId);
         setBoard({
             ...board,
             lists: board.lists.map((l) =>
-                l.id === listId ? {...l, items: l.items.filter((c) => c.id !== cardId)} : l
+                l.id === listId ? {...l, cards: l.cards.filter((c) => c.id !== cardId)} : l
             ),
         });
     };
 
-    const onDragEnd = (result: DropResult) => {
+    // ─── Drag & Drop ──────────────────────────────────────────────────────────
+
+    const onDragEnd = async (result: DropResult) => {
         if (!board) return;
         const {source, destination, type} = result;
         if (!destination) return;
@@ -162,28 +136,36 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
             const [moved] = lists.splice(source.index, 1);
             lists.splice(destination.index, 0, moved);
             setBoard({...board, lists});
+            await reorderLists(boardId, lists.map((l) => l.id));
             return;
         }
 
-        const lists = board.lists.map((l) => ({...l, items: [...l.items]}));
-        const src = lists.find((l) => l.id === source.droppableId);
-        const dst = lists.find((l) => l.id === destination.droppableId);
-        if (!src || !dst) return;
+        // Card drag
+        const lists = board.lists.map((l) => ({...l, cards: [...l.cards]}));
+        const srcList = lists.find((l) => String(l.id) === source.droppableId);
+        const dstList = lists.find((l) => String(l.id) === destination.droppableId);
+        if (!srcList || !dstList) return;
 
-        const [movedCard] = src.items.splice(source.index, 1);
-        dst.items.splice(destination.index, 0, {...movedCard, list: dst.id});
+        const [movedCard] = srcList.cards.splice(source.index, 1);
+        dstList.cards.splice(destination.index, 0, {...movedCard, listId: dstList.id});
         setBoard({...board, lists});
+
+        if (srcList.id === dstList.id) {
+            await reorderCards(srcList.id, srcList.cards.map((c) => c.id));
+        } else {
+            await moveCard(movedCard.id, dstList.id, destination.index);
+        }
     };
 
     // ─── Board background ──────────────────────────────────────────────────────
 
-    const boardStyle: React.CSSProperties = board?.image_url
-        ? {backgroundImage: `url(${board.image_url})`, backgroundSize: "cover", backgroundPosition: "center"}
+    const boardStyle: React.CSSProperties = board?.imageUrl
+        ? {backgroundImage: `url(${board.imageUrl})`, backgroundSize: "cover", backgroundPosition: "center"}
         : board?.color
             ? {backgroundColor: board.color.startsWith("#") ? board.color : `#${board.color}`}
             : {backgroundColor: "#0079bf"};
 
-    if (!board) {
+    if (loading || !board) {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{backgroundColor: "#0079bf"}}>
                 <div className="text-white text-lg font-medium animate-pulse">Loading board...</div>
@@ -193,12 +175,10 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
 
     return (
         <div className="min-h-screen pt-14" style={boardStyle}>
-            {/* Board header */}
             <div className="px-4 py-3 bg-black/10 backdrop-blur-sm flex items-center gap-3">
                 <h1 className="text-white font-bold text-lg drop-shadow">{board.title}</h1>
             </div>
 
-            {/* Lists area */}
             <DragDropContext onDragEnd={onDragEnd}>
                 <Droppable droppableId="board" direction="horizontal" type="list">
                     {(provided) => (
@@ -208,31 +188,21 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                             {...provided.droppableProps}
                         >
                             {board.lists.map((list, index) => (
-                                <Draggable draggableId={list.id} index={index} key={list.id}>
+                                <Draggable draggableId={String(list.id)} index={index} key={list.id}>
                                     {(provided) => (
                                         <div
                                             ref={provided.innerRef}
                                             {...provided.draggableProps}
                                             className="flex-shrink-0"
                                         >
-                                            <List
+                                            <ListComponent
                                                 list={list}
                                                 dragHandleProps={provided.dragHandleProps}
                                                 onAddCard={addCard}
                                                 onRenameList={updateListTitle}
                                                 onDeleteCard={deleteCard}
                                                 onDeleteList={deleteList}
-                                                onOpenCard={(item) =>
-                                                    setActiveCard({
-                                                        listId: list.id,
-                                                        card: {
-                                                            ...item,
-                                                            labels: [],
-                                                            attachments: [],
-                                                            assigned_to: [],
-                                                        },
-                                                    })
-                                                }
+                                                onOpenCard={(card) => setActiveCard({listId: list.id, card})}
                                             />
                                         </div>
                                     )}
@@ -240,7 +210,6 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                             ))}
                             {provided.placeholder}
 
-                            {/* Add list form */}
                             {addingList ? (
                                 <div className="flex-shrink-0 w-64 bg-gray-100 rounded-xl p-2 shadow">
                                     <input
@@ -285,39 +254,34 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                 </Droppable>
             </DragDropContext>
 
-            {/* Card detail modal */}
-            {activeCard && (() => {
-                const list = board.lists.find((l) => l.id === activeCard.listId);
-                if (!list) return null;
-                return (
-                    <EditCardModal
-                        card={activeCard.card}
-                        list={list}
-                        onClose={() => setActiveCard(null)}
-                        onSave={(updated) => {
-                            updateCard(activeCard.listId, updated);
-                            setActiveCard(null);
-                        }}
-                    />
-                );
-            })()}
+            {activeCard && (
+                <EditCardModal
+                    card={activeCard.card}
+                    listName={board.lists.find((l) => l.id === activeCard.listId)?.title ?? ""}
+                    onClose={() => setActiveCard(null)}
+                    onSave={(updated) => {
+                        handleUpdateCard(updated);
+                        setActiveCard(null);
+                    }}
+                />
+            )}
         </div>
     );
 };
 
 // ─── List component ──────────────────────────────────────────────────────────
 
-interface ListProps {
-    list: ListType;
+interface ListComponentProps {
+    list: ListResponse;
     dragHandleProps: any;
-    onAddCard: (listId: string, title: string) => void;
-    onRenameList: (listId: string, title: string) => void;
-    onDeleteCard: (listId: string, cardId: string) => void;
-    onDeleteList: (listId: string) => void;
-    onOpenCard: (item: Item) => void;
+    onAddCard: (listId: number, title: string) => void;
+    onRenameList: (listId: number, title: string) => void;
+    onDeleteCard: (listId: number, cardId: number) => void;
+    onDeleteList: (listId: number) => void;
+    onOpenCard: (card: CardResponse) => void;
 }
 
-const List: React.FC<ListProps> = ({
+const ListComponent: React.FC<ListComponentProps> = ({
     list,
     dragHandleProps,
     onAddCard,
@@ -355,7 +319,6 @@ const List: React.FC<ListProps> = ({
 
     return (
         <div className="w-64 bg-gray-100 rounded-xl shadow flex flex-col max-h-[calc(100vh-10rem)]">
-            {/* List header */}
             <div
                 className="flex items-center justify-between px-3 py-2.5 cursor-grab active:cursor-grabbing"
                 {...dragHandleProps}
@@ -393,8 +356,7 @@ const List: React.FC<ListProps> = ({
                 </button>
             </div>
 
-            {/* Cards */}
-            <Droppable droppableId={list.id} type="card">
+            <Droppable droppableId={String(list.id)} type="card">
                 {(provided, snapshot) => (
                     <div
                         ref={provided.innerRef}
@@ -404,8 +366,8 @@ const List: React.FC<ListProps> = ({
                         }`}
                         style={{minHeight: "8px"}}
                     >
-                        {list.items.map((item, index) => (
-                            <Draggable draggableId={item.id} index={index} key={item.id}>
+                        {list.cards.map((card, index) => (
+                            <Draggable draggableId={String(card.id)} index={index} key={card.id}>
                                 {(provided, snapshot) => (
                                     <div
                                         ref={provided.innerRef}
@@ -414,24 +376,24 @@ const List: React.FC<ListProps> = ({
                                         className={`group bg-white rounded-lg px-3 py-2 shadow-sm cursor-pointer hover:shadow-md transition-all border border-transparent hover:border-blue-200 ${
                                             snapshot.isDragging ? "shadow-lg rotate-1 border-blue-300" : ""
                                         }`}
-                                        onClick={() => onOpenCard(item)}
+                                        onClick={() => onOpenCard(card)}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-sm text-gray-800 break-words">{item.title}</p>
-                                                {item.description && (
-                                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{item.description}</p>
+                                                <p className="text-sm text-gray-800 break-words">{card.title}</p>
+                                                {card.description && (
+                                                    <p className="text-xs text-gray-400 mt-0.5 truncate">{card.description}</p>
                                                 )}
                                             </div>
                                             <div className="flex items-center gap-1.5 flex-shrink-0">
                                                 <span
-                                                    className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot[item.status] ?? "bg-gray-400"}`}
-                                                    title={item.status}
+                                                    className={`w-2 h-2 rounded-full flex-shrink-0 ${statusDot[card.status] ?? "bg-gray-400"}`}
+                                                    title={card.status}
                                                 />
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onDeleteCard(list.id, item.id);
+                                                        onDeleteCard(list.id, card.id);
                                                     }}
                                                     className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 text-sm w-5 h-5 flex items-center justify-center rounded transition-all"
                                                 >
@@ -444,14 +406,13 @@ const List: React.FC<ListProps> = ({
                             </Draggable>
                         ))}
                         {provided.placeholder}
-                        {list.items.length === 0 && !adding && (
+                        {list.cards.length === 0 && !adding && (
                             <p className="text-xs text-gray-400 text-center py-3 italic">No cards yet</p>
                         )}
                     </div>
                 )}
             </Droppable>
 
-            {/* Add card */}
             <div className="px-2 pb-2 pt-1">
                 {adding ? (
                     <div>

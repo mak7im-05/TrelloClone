@@ -1,12 +1,19 @@
 import React from "react";
-import type {Board} from "../static/ts/mockData.ts";
-import type {AuthUser} from "../api/auth.ts";
+import type {AuthUser} from "../api/auth";
+
+export interface BoardInfo {
+    id: number;
+    title: string;
+    is_starred: boolean;
+    color?: string;
+    image_url?: string;
+}
 
 export interface GlobalContextType {
     authUser: AuthUser | null;
     checkedAuth: boolean;
-    board: Board | null;
-    setBoard: React.Dispatch<React.SetStateAction<Board | null>> | null;
+    board: BoardInfo | null;
+    setBoard: React.Dispatch<React.SetStateAction<BoardInfo | null>> | null;
     logout: () => void;
 }
 

@@ -1,7 +1,6 @@
-import React, {useMemo} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {Link} from "react-router-dom";
-import type {Board} from "../../static/ts/mockData";
-import {mockBoards} from "../../static/ts/mockData";
+import {fetchBoards, type BoardSummary} from "../../api/boards";
 
 interface SearchModalProps {
     backendQuery: string;
@@ -10,14 +9,20 @@ interface SearchModalProps {
 }
 
 const SearchModal: React.FC<SearchModalProps> = ({backendQuery}) => {
+    const [boards, setBoards] = useState<BoardSummary[]>([]);
+
+    useEffect(() => {
+        fetchBoards().then(setBoards).catch(() => {});
+    }, []);
+
     const normalizedQuery = backendQuery.trim().toLowerCase();
 
-    const foundBoards: Board[] = useMemo(() => {
+    const foundBoards = useMemo(() => {
         if (!normalizedQuery) return [];
-        return mockBoards.filter((board) =>
+        return boards.filter((board) =>
             board.title.toLowerCase().includes(normalizedQuery)
         );
-    }, [normalizedQuery]);
+    }, [normalizedQuery, boards]);
 
     return (
         <div className="absolute top-full mt-2 left-0 right-0 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden z-50">
@@ -30,8 +35,8 @@ const SearchModal: React.FC<SearchModalProps> = ({backendQuery}) => {
                     {foundBoards.map((board) => {
                         const bg = board.color
                             ? {backgroundColor: board.color.startsWith("#") ? board.color : `#${board.color}`}
-                            : board.image_url
-                                ? {backgroundImage: `url(${board.image_url})`, backgroundSize: "cover"}
+                            : board.imageUrl
+                                ? {backgroundImage: `url(${board.imageUrl})`, backgroundSize: "cover"}
                                 : {backgroundColor: "#6B7280"};
 
                         return (

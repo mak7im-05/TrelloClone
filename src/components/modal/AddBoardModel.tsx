@@ -1,13 +1,11 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import BoardBackground from "./BoardBackground";
 import {type BackgroundOption, getAddBoardStyle} from "../../static/ts/util";
-import {mockColors, mockImages} from "../../static/ts/mockData.ts";
-import type {Board} from "../../static/ts/mockData.ts";
+import {mockColors, mockImages} from "../../static/ts/mockData";
 
 interface AddBoardModalProps {
     setShowAddBoardModal: (value: boolean) => void;
-    addBoard: (board: Board) => void;
-    project: number;
+    addBoard: (data: { title: string; color?: string; imageUrl?: string }) => void;
 }
 
 const getBackgroundModalPosition = (boardElem: HTMLDivElement | null) => {
@@ -19,14 +17,13 @@ const getBackgroundModalPosition = (boardElem: HTMLDivElement | null) => {
     };
 };
 
-const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addBoard, project}) => {
+const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addBoard}) => {
     const [selectedBackground, setSelectedBackground] = useState<number>(0);
     const [extraBackground, setExtraBackground] = useState<BackgroundOption | null>(null);
     const [title, setTitle] = useState<string>("");
     const [showBoardModal, setShowBoardModal] = useState<boolean>(false);
     const boardElem = useRef<HTMLDivElement | null>(null);
 
-    // Close when clicking outside
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === "Escape") setShowAddBoardModal(false);
@@ -47,15 +44,17 @@ const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addB
 
     const onSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        if (!title.trim()) return;
         const bg = options[selectedBackground];
-        const newBoard: Board = {
-            title,
-            is_starred: false,
-            ...(project !== 0 && {project} as any),
-            ...(bg[1] ? {image_url: bg[2]} : {color: bg[0]}),
-            id: Date.now(),
+        const data: { title: string; color?: string; imageUrl?: string } = {
+            title: title.trim(),
         };
-        addBoard(newBoard);
+        if (bg[1]) {
+            data.imageUrl = bg[2] as string;
+        } else {
+            data.color = bg[0];
+        }
+        addBoard(data);
         setShowAddBoardModal(false);
     };
 
@@ -63,7 +62,6 @@ const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addB
 
     return (
         <>
-            {/* Backdrop */}
             <div
                 className="fixed inset-0 bg-black/40 z-40 flex items-center justify-center"
                 onClick={() => setShowAddBoardModal(false)}
@@ -72,7 +70,6 @@ const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addB
                     className="bg-white rounded-xl shadow-2xl w-[360px] overflow-hidden z-50"
                     onClick={(e) => e.stopPropagation()}
                 >
-                    {/* Preview with title input */}
                     <div
                         className="relative h-28 flex items-end pb-3 px-3"
                         style={getAddBoardStyle(selectedBg[0], selectedBg[1])}
@@ -94,7 +91,6 @@ const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addB
                         </button>
                     </div>
 
-                    {/* Background picker */}
                     <div className="p-3">
                         <p className="text-xs font-semibold text-gray-500 mb-2">Background</p>
                         <div className="flex flex-wrap gap-2" ref={boardElem}>
@@ -123,7 +119,6 @@ const AddBoardModal: React.FC<AddBoardModalProps> = ({setShowAddBoardModal, addB
                         </div>
                     </div>
 
-                    {/* Submit */}
                     <div className="px-3 pb-3">
                         <button
                             type="submit"

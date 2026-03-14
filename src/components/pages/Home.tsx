@@ -1,34 +1,57 @@
-import React, {useState} from "react";
-import {Link} from "react-router-dom";
-
+import React, {useEffect, useState} from "react";
 import AddBoardModal from "../modal/AddBoardModel";
 import HomeBoard from "../boards/HomeBoard";
 import HomeSidebar from "../sidebars/HomeSidebar";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
-import {filterBoards} from "../../static/ts/board";
-import {type Board, mockBoards} from "../../static/ts/mockData";
+import {fetchBoards, createBoard, updateBoard, deleteBoard, type BoardSummary} from "../../api/boards";
 
 const Home: React.FC = () => {
     useDocumentTitle("Boards | Trello");
 
     const [showAddBoardModal, setShowAddBoardModal] = useState(false);
-    const [boardProject, setBoardProject] = useState<number>(0);
-    const [boards, setBoards] = useState<Board[]>(mockBoards);
+    const [boards, setBoards] = useState<BoardSummary[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const addBoard = (board: Board) => {
-        setBoards((prev) => [...prev, board]);
+    useEffect(() => {
+        fetchBoards()
+            .then(setBoards)
+            .catch((err) => console.error("Failed to load boards:", err))
+            .finally(() => setLoading(false));
+    }, []);
+
+    const addBoard = async (data: { title: string; color?: string; imageUrl?: string }) => {
+        const board = await createBoard(data);
+        setBoards((prev) => [board, ...prev]);
     };
 
-    const replaceBoard = (updated: Board) => {
+    const replaceBoard = (updated: BoardSummary) => {
         setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
     };
 
-    const [userBoards, projectBoards, starredBoards] = filterBoards(boards);
+    const handleToggleStar = async (board: BoardSummary) => {
+        const updated = await updateBoard(board.id, {isStarred: !board.isStarred});
+        replaceBoard(updated);
+    };
+
+    const handleDeleteBoard = async (id: number) => {
+        await deleteBoard(id);
+        setBoards((prev) => prev.filter((b) => b.id !== id));
+    };
+
+    const starredBoards = boards.filter((b) => b.isStarred);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 pt-14 flex items-center justify-center">
+                <div className="text-gray-400 text-lg animate-pulse">Loading boards...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 pt-14">
             <div className="max-w-6xl mx-auto px-4 py-8 flex gap-8">
-                <HomeSidebar projects={projectBoards.map((p) => ({id: p.id, title: p.title}))}/>
+                <HomeSidebar projects={[]}/>
 
                 <main className="flex-1 min-w-0">
                     {/* Starred */}
@@ -40,7 +63,12 @@ const Home: React.FC = () => {
                             </h2>
                             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                                 {starredBoards.map((board) => (
-                                    <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
+                                    <HomeBoard
+                                        key={board.id}
+                                        board={board}
+                                        onToggleStar={() => handleToggleStar(board)}
+                                        onDelete={() => handleDeleteBoard(board.id)}
+                                    />
                                 ))}
                             </div>
                         </section>
@@ -55,25 +83,23 @@ const Home: React.FC = () => {
                             </h2>
                             <button
                                 className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                                onClick={() => {
-                                    setBoardProject(0);
-                                    setShowAddBoardModal(true);
-                                }}
+                                onClick={() => setShowAddBoardModal(true)}
                             >
                                 <i className="fal fa-plus"/> Create
                             </button>
                         </div>
 
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                            {userBoards.map((board) => (
-                                <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
+                            {boards.map((board) => (
+                                <HomeBoard
+                                    key={board.id}
+                                    board={board}
+                                    onToggleStar={() => handleToggleStar(board)}
+                                    onDelete={() => handleDeleteBoard(board.id)}
+                                />
                             ))}
-                            {/* Create new board tile */}
                             <button
-                                onClick={() => {
-                                    setBoardProject(0);
-                                    setShowAddBoardModal(true);
-                                }}
+                                onClick={() => setShowAddBoardModal(true)}
                                 className="rounded-lg bg-gray-200 hover:bg-gray-300 transition-colors flex items-center justify-center text-gray-500 text-sm font-medium"
                                 style={{minHeight: "96px"}}
                             >
@@ -81,41 +107,6 @@ const Home: React.FC = () => {
                             </button>
                         </div>
                     </section>
-
-                    {/* Project boards */}
-                    {projectBoards.map((project) => (
-                        <section key={project.id} className="mb-8">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="flex items-center gap-2 text-sm font-semibold text-gray-700">
-                                    <i className="fal fa-users"/>
-                                    {project.title}
-                                </h2>
-                                <div className="flex items-center gap-2">
-                                    <Link
-                                        className="text-xs text-gray-600 hover:text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
-                                        to={`/p/${project.id}`}
-                                    >
-                                        Boards
-                                    </Link>
-                                    <button
-                                        className="text-xs text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
-                                        onClick={() => {
-                                            setBoardProject(project.id);
-                                            setShowAddBoardModal(true);
-                                        }}
-                                    >
-                                        <i className="fal fa-plus"/> Create
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                                {project.boards.map((board: Board) => (
-                                    <HomeBoard key={board.id} board={board} replaceBoard={replaceBoard}/>
-                                ))}
-                            </div>
-                        </section>
-                    ))}
                 </main>
             </div>
 
@@ -123,7 +114,6 @@ const Home: React.FC = () => {
                 <AddBoardModal
                     setShowAddBoardModal={setShowAddBoardModal}
                     addBoard={addBoard}
-                    project={boardProject}
                 />
             )}
         </div>

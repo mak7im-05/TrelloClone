@@ -1,17 +1,16 @@
 import {useEffect, useState} from "react";
 import {useLocation, useNavigate, Routes, Route} from "react-router-dom";
 import Header from "./components/header/Header";
-import Home from "./components/pages/Home.tsx";
+import Home from "./components/pages/Home";
 import BoardPage from "./components/pages/BoardPage";
-import AuthPage from "./components/pages/AuthPage.tsx";
-import globalContext from "./context/globalContext";
-import type {Board} from "./static/ts/mockData";
+import AuthPage from "./components/pages/AuthPage";
+import globalContext, {type BoardInfo} from "./context/globalContext";
 import {fetchMe, getToken, removeToken, type AuthUser} from "./api/auth";
 
 function App() {
     const location = useLocation();
     const navigate = useNavigate();
-    const [board, setBoard] = useState<Board | null>(null);
+    const [board, setBoard] = useState<BoardInfo | null>(null);
     const [authUser, setAuthUser] = useState<AuthUser | null>(null);
     const [checkedAuth, setCheckedAuth] = useState(false);
 
