@@ -6,6 +6,8 @@ import {
     fetchAttachments, uploadAttachment, deleteAttachment,
 } from "../../api/boards";
 
+const API_BASE = import.meta.env.VITE_API_URL || '';
+
 export interface EditCardModalProps {
     card: CardResponse;
     listName: string;
@@ -247,7 +249,7 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, onClose, o
                                         <div className="flex items-center gap-2 min-w-0">
                                             <i className="fal fa-paperclip text-gray-400 flex-shrink-0"/>
                                             <a
-                                                href={att.url}
+                                                href={`${API_BASE}${att.url}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-sm text-blue-600 hover:underline truncate"
