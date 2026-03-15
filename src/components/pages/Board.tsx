@@ -257,9 +257,10 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                                     className="flex gap-2"
                                 >
                                     <input
+                                        type="email"
                                         value={inviteEmail}
                                         onChange={(e) => setInviteEmail(e.target.value)}
-                                        placeholder="Email"
+                                        placeholder="Enter member email"
                                         className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-blue-400"
                                     />
                                     <button
