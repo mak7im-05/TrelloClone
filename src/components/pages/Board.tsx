@@ -245,10 +245,9 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                                 <form
                                     onSubmit={async (e) => {
                                         e.preventDefault();
-                                        const id = parseInt(inviteEmail);
-                                        if (!id) return;
+                                        if (!inviteEmail.trim()) return;
                                         try {
-                                            const m = await addMember(boardId, id);
+                                            const m = await addMember(boardId, inviteEmail.trim());
                                             setMembers((prev) => [...prev, m]);
                                             setInviteEmail("");
                                         } catch (err) {
@@ -260,7 +259,7 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                                     <input
                                         value={inviteEmail}
                                         onChange={(e) => setInviteEmail(e.target.value)}
-                                        placeholder="User ID"
+                                        placeholder="Email"
                                         className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-blue-400"
                                     />
                                     <button
@@ -462,7 +461,7 @@ const ListComponent: React.FC<ListComponentProps> = ({
                         className={`flex flex-col gap-2 px-2 overflow-y-auto flex-1 transition-colors ${
                             snapshot.isDraggingOver ? "bg-blue-50" : ""
                         }`}
-                        style={{minHeight: "8px"}}
+                        style={{minHeight: "40px", paddingBottom: "8px"}}
                     >
                         {list.cards.map((card, index) => (
                             <Draggable draggableId={String(card.id)} index={index} key={card.id}>
@@ -471,9 +470,10 @@ const ListComponent: React.FC<ListComponentProps> = ({
                                         ref={provided.innerRef}
                                         {...provided.draggableProps}
                                         {...provided.dragHandleProps}
-                                        className={`group bg-white rounded-lg px-3 py-2 shadow-sm cursor-pointer hover:shadow-md transition-all border border-transparent hover:border-blue-200 ${
+                                        className={`group bg-white rounded-lg px-3 py-2 shadow-sm cursor-pointer hover:shadow-md transition-all border border-transparent hover:border-blue-200 select-none ${
                                             snapshot.isDragging ? "shadow-lg rotate-1 border-blue-300" : ""
                                         }`}
+                                        style={{touchAction: "none"}}
                                         onClick={() => onOpenCard(card)}
                                     >
                                         <div className="flex items-start justify-between gap-2">

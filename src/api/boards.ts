@@ -228,10 +228,10 @@ export function fetchMembers(boardId: number): Promise<MemberResponse[]> {
     return request(`/api/boards/${boardId}/members`);
 }
 
-export function addMember(boardId: number, userId: number, role = 'member'): Promise<MemberResponse> {
+export function addMember(boardId: number, email: string, role = 'member'): Promise<MemberResponse> {
     return request(`/api/boards/${boardId}/members`, {
         method: 'POST',
-        body: JSON.stringify({ userId, role }),
+        body: JSON.stringify({ email, role }),
     });
 }
 
