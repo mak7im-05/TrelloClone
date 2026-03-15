@@ -474,8 +474,11 @@ const ListComponent: React.FC<ListComponentProps> = ({
                                         className={`group bg-white rounded-lg px-3 py-2 shadow-sm cursor-pointer hover:shadow-md transition-all border border-transparent hover:border-blue-200 select-none ${
                                             snapshot.isDragging ? "shadow-lg rotate-1 border-blue-300" : ""
                                         }`}
-                                        style={{touchAction: "none"}}
-                                        onClick={() => onOpenCard(card)}
+                                        style={{
+                                            ...provided.draggableProps.style,
+                                            touchAction: "none",
+                                        }}
+                                        onClick={() => !snapshot.isDragging && onOpenCard(card)}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
