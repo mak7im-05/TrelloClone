@@ -36,6 +36,7 @@ export interface CardResponse {
     status: string;
     order: number;
     listId: number;
+    labels?: { label: { id: number; name: string; color: string } }[];
 }
 
 export interface ListResponse {
@@ -206,6 +207,51 @@ export async function uploadAttachment(cardId: number, file: File): Promise<Atta
 
 export function deleteAttachment(id: number): Promise<void> {
     return request(`/api/attachments/${id}`, { method: 'DELETE' });
+}
+
+// ─── Label API ──────────────────────────────────────────────────────────
+
+export interface LabelResponse {
+    id: number;
+    name: string;
+    color: string;
+    boardId: number;
+}
+
+export interface CardLabelResponse {
+    cardId: number;
+    labelId: number;
+    label: LabelResponse;
+}
+
+export function fetchLabels(boardId: number): Promise<LabelResponse[]> {
+    return request(`/api/boards/${boardId}/labels`);
+}
+
+export function createLabel(boardId: number, data: { name: string; color: string }): Promise<LabelResponse> {
+    return request(`/api/boards/${boardId}/labels`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    });
+}
+
+export function updateLabel(id: number, data: { name?: string; color?: string }): Promise<LabelResponse> {
+    return request(`/api/labels/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+    });
+}
+
+export function deleteLabel(id: number): Promise<void> {
+    return request(`/api/labels/${id}`, { method: 'DELETE' });
+}
+
+export function addLabelToCard(cardId: number, labelId: number): Promise<CardLabelResponse> {
+    return request(`/api/cards/${cardId}/labels/${labelId}`, { method: 'POST' });
+}
+
+export function removeLabelFromCard(cardId: number, labelId: number): Promise<void> {
+    return request(`/api/cards/${cardId}/labels/${labelId}`, { method: 'DELETE' });
 }
 
 // ─── Search API ──────────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 import React, {useEffect, useRef, useState} from "react";
 import {timeSince} from "../../static/ts/util";
-import type {CardResponse, CommentResponse, AttachmentResponse, MemberResponse, AssigneeResponse} from "../../api/boards";
+import type {CardResponse, CommentResponse, AttachmentResponse, MemberResponse, AssigneeResponse, LabelResponse} from "../../api/boards";
 import {
     fetchComments, createComment, deleteComment,
     fetchAttachments, uploadAttachment, deleteAttachment,
     fetchAssignees, assignCard, unassignCard,
+    addLabelToCard, removeLabelFromCard,
+    createLabel, deleteLabel,
 } from "../../api/boards";
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -13,8 +15,11 @@ export interface EditCardModalProps {
     card: CardResponse;
     listName: string;
     boardMembers: MemberResponse[];
+    boardLabels: LabelResponse[];
+    boardId: number;
     onClose: () => void;
     onSave: (updated: CardResponse) => void;
+    onLabelsChanged?: () => void;
 }
 
 const STATUS_OPTIONS = [
@@ -23,7 +28,12 @@ const STATUS_OPTIONS = [
     {value: "done", label: "Done"},
 ];
 
-const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembers, onClose, onSave}) => {
+const LABEL_COLORS = [
+    "#ef4444", "#f97316", "#eab308", "#22c55e", "#3b82f6",
+    "#8b5cf6", "#ec4899", "#6b7280", "#0ea5e9", "#14b8a6",
+];
+
+const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembers, boardLabels, boardId, onClose, onSave, onLabelsChanged}) => {
     const [cardState, setCardState] = useState<CardResponse>(card);
     const [editingTitle, setEditingTitle] = useState(false);
     const [editingDescription, setEditingDescription] = useState(false);
@@ -34,11 +44,44 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembe
     const commentRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Labels state
+    const [cardLabelIds, setCardLabelIds] = useState<Set<number>>(
+        new Set((card.labels || []).map((cl) => cl.label.id))
+    );
+    const [showCreateLabel, setShowCreateLabel] = useState(false);
+    const [newLabelName, setNewLabelName] = useState("");
+    const [newLabelColor, setNewLabelColor] = useState(LABEL_COLORS[0]);
+
     useEffect(() => {
         fetchComments(card.id).then(setComments).catch(() => {});
         fetchAttachments(card.id).then(setAttachments).catch(() => {});
         fetchAssignees(card.id).then(setAssignees).catch(() => {});
     }, [card.id]);
+
+    const handleToggleLabel = async (labelId: number) => {
+        if (cardLabelIds.has(labelId)) {
+            await removeLabelFromCard(card.id, labelId);
+            setCardLabelIds((prev) => { const s = new Set(prev); s.delete(labelId); return s; });
+        } else {
+            await addLabelToCard(card.id, labelId);
+            setCardLabelIds((prev) => new Set(prev).add(labelId));
+        }
+    };
+
+    const handleCreateLabel = async () => {
+        if (!newLabelName.trim()) return;
+        await createLabel(boardId, { name: newLabelName.trim(), color: newLabelColor });
+        setNewLabelName("");
+        setNewLabelColor(LABEL_COLORS[0]);
+        setShowCreateLabel(false);
+        onLabelsChanged?.();
+    };
+
+    const handleDeleteLabel = async (labelId: number) => {
+        await deleteLabel(labelId);
+        setCardLabelIds((prev) => { const s = new Set(prev); s.delete(labelId); return s; });
+        onLabelsChanged?.();
+    };
 
     const handleAssign = async (userId: number) => {
         const a = await assignCard(card.id, userId);
@@ -174,6 +217,82 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembe
                                 </button>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Labels */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Labels</p>
+                            <button
+                                onClick={() => setShowCreateLabel(!showCreateLabel)}
+                                className="text-xs text-blue-600 hover:underline"
+                            >
+                                {showCreateLabel ? "Cancel" : "+ New label"}
+                            </button>
+                        </div>
+
+                        {showCreateLabel && (
+                            <div className="bg-white rounded-lg p-3 border border-gray-200 mb-2">
+                                <input
+                                    type="text"
+                                    value={newLabelName}
+                                    onChange={(e) => setNewLabelName(e.target.value)}
+                                    placeholder="Label name"
+                                    className="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-blue-400 mb-2"
+                                    onKeyDown={(e) => { if (e.key === "Enter") handleCreateLabel(); }}
+                                />
+                                <div className="flex flex-wrap gap-1.5 mb-2">
+                                    {LABEL_COLORS.map((c) => (
+                                        <button
+                                            key={c}
+                                            onClick={() => setNewLabelColor(c)}
+                                            className={`w-6 h-6 rounded-full transition-all ${newLabelColor === c ? "ring-2 ring-offset-1 ring-blue-500 scale-110" : "hover:scale-110"}`}
+                                            style={{backgroundColor: c}}
+                                        />
+                                    ))}
+                                </div>
+                                <button
+                                    onClick={handleCreateLabel}
+                                    disabled={!newLabelName.trim()}
+                                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                >
+                                    Create
+                                </button>
+                            </div>
+                        )}
+
+                        {boardLabels.length === 0 ? (
+                            <p className="text-sm text-gray-400 italic">No labels on this board yet.</p>
+                        ) : (
+                            <div className="flex flex-wrap gap-1.5">
+                                {boardLabels.map((label) => {
+                                    const isActive = cardLabelIds.has(label.id);
+                                    return (
+                                        <div key={label.id} className="flex items-center gap-0.5">
+                                            <button
+                                                onClick={() => handleToggleLabel(label.id)}
+                                                className={`text-xs px-3 py-1.5 rounded-full font-medium transition-all border ${
+                                                    isActive
+                                                        ? "text-white border-transparent shadow-sm"
+                                                        : "border-gray-200 text-gray-500 hover:opacity-80"
+                                                }`}
+                                                style={isActive ? {backgroundColor: label.color} : {backgroundColor: label.color + "20", color: label.color}}
+                                            >
+                                                {isActive && <span className="mr-1">&#10003;</span>}
+                                                {label.name}
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteLabel(label.id)}
+                                                className="text-gray-300 hover:text-red-500 text-xs transition-colors"
+                                                title="Delete label"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
 
                     {/* Description */}

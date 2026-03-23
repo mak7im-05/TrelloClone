@@ -18,10 +18,12 @@ import {
     fetchMembers,
     addMember,
     removeMember,
+    fetchLabels,
     type BoardFull,
     type ListResponse,
     type CardResponse,
     type MemberResponse,
+    type LabelResponse,
 } from "../../api/boards";
 
 interface BoardProps {
@@ -39,6 +41,7 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
 
     const [activeCard, setActiveCard] = useState<{ listId: number; card: CardResponse } | null>(null);
     const [members, setMembers] = useState<MemberResponse[]>([]);
+    const [boardLabels, setBoardLabels] = useState<LabelResponse[]>([]);
     const [showMembers, setShowMembers] = useState(false);
     const [inviteEmail, setInviteEmail] = useState("");
 
@@ -58,7 +61,12 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
             .catch((err) => console.error("Failed to load board:", err))
             .finally(() => setLoading(false));
         fetchMembers(boardId).then(setMembers).catch(() => {});
+        fetchLabels(boardId).then(setBoardLabels).catch(() => {});
     }, [boardId, setGlobalBoard]);
+
+    const refreshLabels = () => {
+        fetchLabels(boardId).then(setBoardLabels).catch(() => {});
+    };
 
     useDocumentTitle(board ? `${board.title} | Trello` : "Loading...");
 
@@ -356,11 +364,14 @@ const Board: React.FC<BoardProps> = ({boardId}) => {
                     card={activeCard.card}
                     listName={board.lists.find((l) => l.id === activeCard.listId)?.title ?? ""}
                     boardMembers={members}
+                    boardLabels={boardLabels}
+                    boardId={boardId}
                     onClose={() => setActiveCard(null)}
                     onSave={(updated) => {
                         handleUpdateCard(updated);
                         setActiveCard(null);
                     }}
+                    onLabelsChanged={refreshLabels}
                 />
             )}
         </div>
@@ -480,6 +491,18 @@ const ListComponent: React.FC<ListComponentProps> = ({
                                         }}
                                         onClick={() => !snapshot.isDragging && onOpenCard(card)}
                                     >
+                                        {card.labels && card.labels.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 mb-1.5">
+                                                {card.labels.map((cl) => (
+                                                    <span
+                                                        key={cl.label.id}
+                                                        className="h-2 w-8 rounded-full inline-block"
+                                                        style={{backgroundColor: cl.label.color}}
+                                                        title={cl.label.name}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-sm text-gray-800 break-words">{card.title}</p>
