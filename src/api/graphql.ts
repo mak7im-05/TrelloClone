@@ -22,12 +22,21 @@ export async function gqlRequest<T>(query: string, variables?: Record<string, un
         body: JSON.stringify({ query, variables }),
     });
 
-    const json: GraphQLResponse<T> = await res.json();
+    const text = await res.text();
+    let json: GraphQLResponse<T>;
+    try {
+        json = JSON.parse(text);
+    } catch {
+        console.error('[GraphQL] Response is not JSON:', text.slice(0, 500));
+        throw new Error('GraphQL endpoint returned non-JSON response');
+    }
 
     if (json.errors?.length) {
+        console.error('[GraphQL] Errors:', json.errors);
         throw new Error(json.errors[0].message);
     }
     if (!json.data) {
+        console.error('[GraphQL] No data in response:', json);
         throw new Error('No data returned from GraphQL');
     }
     return json.data;

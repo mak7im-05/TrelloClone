@@ -20,8 +20,12 @@ const Home: React.FC = () => {
     }, []);
 
     const addBoard = async (data: { title: string; color?: string; imageUrl?: string }) => {
-        const board = await createBoard(data);
-        setBoards((prev) => [board, ...prev]);
+        try {
+            const board = await createBoard(data);
+            setBoards((prev) => [board, ...prev]);
+        } catch (err) {
+            console.error("Failed to create board:", err);
+        }
     };
 
     const replaceBoard = (updated: BoardSummary) => {
