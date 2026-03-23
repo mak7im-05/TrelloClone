@@ -1,4 +1,5 @@
 import { getToken } from './auth';
+import { gqlRequest } from './graphql';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -75,11 +76,19 @@ export function fetchBoard(id: number): Promise<BoardFull> {
     return request(`/api/boards/${id}`);
 }
 
-export function createBoard(data: { title: string; color?: string; imageUrl?: string }): Promise<BoardSummary> {
-    return request('/api/boards', {
-        method: 'POST',
-        body: JSON.stringify(data),
-    });
+export async function createBoard(data: { title: string; color?: string; imageUrl?: string }): Promise<BoardSummary> {
+    const result = await gqlRequest<{ createBoard: BoardSummary }>(`
+        mutation CreateBoard($input: CreateBoardInput!) {
+            createBoard(input: $input) {
+                id
+                title
+                color
+                imageUrl
+                isStarred
+            }
+        }
+    `, { input: data });
+    return result.createBoard;
 }
 
 export function updateBoard(id: number, data: { title?: string; color?: string; imageUrl?: string; isStarred?: boolean }): Promise<BoardSummary> {
@@ -89,8 +98,12 @@ export function updateBoard(id: number, data: { title?: string; color?: string; 
     });
 }
 
-export function deleteBoard(id: number): Promise<void> {
-    return request(`/api/boards/${id}`, { method: 'DELETE' });
+export async function deleteBoard(id: number): Promise<void> {
+    await gqlRequest(`
+        mutation DeleteBoard($id: Int!) {
+            deleteBoard(id: $id)
+        }
+    `, { id });
 }
 
 // ─── List API ────────────────────────────────────────────────────────────────
@@ -129,15 +142,28 @@ export function createCard(listId: number, data: { title: string }): Promise<Car
     });
 }
 
-export function updateCard(id: number, data: { title?: string; description?: string; status?: string }): Promise<CardResponse> {
-    return request(`/api/cards/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-    });
+export async function updateCard(id: number, data: { title?: string; description?: string; status?: string }): Promise<CardResponse> {
+    const result = await gqlRequest<{ updateCard: CardResponse }>(`
+        mutation UpdateCard($id: Int!, $input: UpdateCardInput!) {
+            updateCard(id: $id, input: $input) {
+                id
+                title
+                description
+                status
+                order
+                listId
+            }
+        }
+    `, { id, input: data });
+    return result.updateCard;
 }
 
-export function deleteCard(id: number): Promise<void> {
-    return request(`/api/cards/${id}`, { method: 'DELETE' });
+export async function deleteCard(id: number): Promise<void> {
+    await gqlRequest(`
+        mutation DeleteCard($id: Int!) {
+            deleteCard(id: $id)
+        }
+    `, { id });
 }
 
 export function moveCard(id: number, targetListId: number, order: number): Promise<void> {
