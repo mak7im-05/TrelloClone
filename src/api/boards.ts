@@ -1,4 +1,4 @@
-import { getToken } from './auth';
+import { getToken, getRefreshToken, tryRefreshToken } from './auth';
 import { gqlRequest } from './graphql';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -11,7 +11,16 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
     }
-    const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+    let res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+
+    if (res.status === 401 && getRefreshToken()) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            headers['Authorization'] = `Bearer ${getToken()}`;
+            res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+        }
+    }
+
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || res.statusText);
@@ -215,15 +224,26 @@ export async function uploadAttachment(cardId: number, file: File): Promise<Atta
     const formData = new FormData();
     formData.append('file', file);
 
-    const token = getToken();
-    const headers: Record<string, string> = {};
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const doUpload = async () => {
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        return fetch(`${API_BASE}/api/cards/${cardId}/attachments`, {
+            method: 'POST',
+            headers,
+            body: formData,
+        });
+    };
 
-    const res = await fetch(`${API_BASE}/api/cards/${cardId}/attachments`, {
-        method: 'POST',
-        headers,
-        body: formData,
-    });
+    let res = await doUpload();
+
+    if (res.status === 401 && getRefreshToken()) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            res = await doUpload();
+        }
+    }
+
     if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body.message || res.statusText);

@@ -5,7 +5,7 @@ import Home from "./components/pages/Home";
 import BoardPage from "./components/pages/BoardPage";
 import AuthPage from "./components/pages/AuthPage";
 import globalContext, {type BoardInfo} from "./context/globalContext";
-import {fetchMe, getToken, removeToken, type AuthUser} from "./api/auth";
+import {fetchMe, getToken, apiLogout, type AuthUser} from "./api/auth";
 
 function App() {
     const location = useLocation();
@@ -22,7 +22,7 @@ function App() {
         }
         fetchMe()
             .then((user) => setAuthUser(user))
-            .catch(() => removeToken())
+            .catch(() => apiLogout())
             .finally(() => setCheckedAuth(true));
     }, []);
 
@@ -33,8 +33,8 @@ function App() {
         }
     }, [checkedAuth, authUser, location.pathname, navigate]);
 
-    const logout = () => {
-        removeToken();
+    const logout = async () => {
+        await apiLogout();
         setAuthUser(null);
         navigate("/register", {replace: true});
     };

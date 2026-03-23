@@ -1,13 +1,13 @@
-import { getToken } from './auth';
+import { getToken, getRefreshToken, tryRefreshToken } from './auth';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
 interface GraphQLResponse<T> {
     data?: T;
-    errors?: { message: string }[];
+    errors?: { message: string; extensions?: { code?: string } }[];
 }
 
-export async function gqlRequest<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+async function doGqlFetch<T>(query: string, variables?: Record<string, unknown>): Promise<GraphQLResponse<T>> {
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
@@ -23,12 +23,28 @@ export async function gqlRequest<T>(query: string, variables?: Record<string, un
     });
 
     const text = await res.text();
-    let json: GraphQLResponse<T>;
     try {
-        json = JSON.parse(text);
+        return JSON.parse(text);
     } catch {
         console.error('[GraphQL] Response is not JSON:', text.slice(0, 500));
         throw new Error('GraphQL endpoint returned non-JSON response');
+    }
+}
+
+function isAuthError<T>(json: GraphQLResponse<T>): boolean {
+    return json.errors?.some(
+        (e) => e.extensions?.code === 'UNAUTHENTICATED' || e.message === 'Unauthorized',
+    ) ?? false;
+}
+
+export async function gqlRequest<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
+    let json = await doGqlFetch<T>(query, variables);
+
+    if (isAuthError(json) && getRefreshToken()) {
+        const refreshed = await tryRefreshToken();
+        if (refreshed) {
+            json = await doGqlFetch<T>(query, variables);
+        }
     }
 
     if (json.errors?.length) {

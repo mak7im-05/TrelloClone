@@ -385,7 +385,7 @@ const EditCardModal: React.FC<EditCardModalProps> = ({card, listName, boardMembe
                                         <div className="flex items-center gap-2 min-w-0">
                                             <i className="fal fa-paperclip text-gray-400 flex-shrink-0"/>
                                             <a
-                                                href={`${API_BASE}${att.url}`}
+                                                href={att.url.startsWith('http') ? att.url : `${API_BASE}${att.url}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="text-sm text-blue-600 hover:underline truncate"
